@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "react-router build",
-    "dev": "CADDYFILE_PATH=./Caddyfile.j2 react-router dev",
+    "dev": "CADDYFILE_PATH=./Caddyfile.example react-router dev",
     "start": "react-router-serve ./build/server/index.js",
     "typecheck": "react-router typegen && tsc",
     "format": "prettier --write \"**/*.{ts,tsx}\""

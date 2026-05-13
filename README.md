@@ -30,7 +30,7 @@ By default, the application reads:
 The path can be overridden with the `CADDYFILE_PATH` environment variable:
 
 ```bash
-CADDYFILE_PATH=/etc/caddy/Caddyfile.j2
+CADDYFILE_PATH=/etc/caddy/Caddyfile
 ```
 
 The file is read server-side. Do not expose arbitrary path selection from the UI
@@ -50,7 +50,7 @@ Start the development server:
 npm run dev
 ```
 
-The development script currently points to `./Caddyfile.j2` through
+The development script currently points to `./Caddyfile.example` through
 `CADDYFILE_PATH`, so the app can be tested without reading
 `/etc/caddy/Caddyfile`.
 
@@ -104,7 +104,5 @@ Environment=CADDYFILE_PATH=/etc/caddy/Caddyfile
 
 ## Current Limitations
 
-- Jinja templates (`.j2`) are scanned statically: variables, loops, and
-  conditions are not rendered.
 - The application reads the Caddyfile, but does not modify Caddy configuration.
 - The application does not trigger Caddy reloads.

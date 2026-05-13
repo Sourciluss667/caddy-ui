@@ -43,7 +43,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 Server-side reading of the configured Caddyfile. To target a
                 specific file, start the app with{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  CADDYFILE_PATH=/path/to/Caddyfile.j2
+                  CADDYFILE_PATH=/path/to/Caddyfile
                 </code>
                 .
               </p>

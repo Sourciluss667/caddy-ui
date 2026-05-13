@@ -55,7 +55,6 @@ export async function loadCaddyfileSites(): Promise<CaddyfileLoadResult> {
 
 export function parseCaddyfile(content: string) {
   const sites: CaddySite[] = []
-  const warnings = new Set<string>()
   const pendingHeader: PendingHeader = { lines: [], sourceLine: 1 }
   let depth = 0
 
@@ -64,12 +63,6 @@ export function parseCaddyfile(content: string) {
   lines.forEach((line, index) => {
     const lineNumber = index + 1
     const strippedLine = stripComment(line).trim()
-
-    if (containsJinja(strippedLine)) {
-      warnings.add(
-        "The file contains Jinja expressions; they are displayed without being evaluated.",
-      )
-    }
 
     if (!strippedLine) {
       return
@@ -88,7 +81,6 @@ export function parseCaddyfile(content: string) {
 
         addSiteBlock(
           sites,
-          warnings,
           headerLines.join(" "),
           pendingHeader.lines.length > 0
             ? pendingHeader.sourceLine
@@ -116,13 +108,12 @@ export function parseCaddyfile(content: string) {
 
   return {
     sites,
-    warnings: [...warnings],
+    warnings: [],
   }
 }
 
 function addSiteBlock(
   sites: CaddySite[],
-  warnings: Set<string>,
   header: string,
   sourceLine: number,
 ) {
@@ -136,21 +127,11 @@ function addSiteBlock(
     return
   }
 
-  const siteWarnings: string[] = []
-
-  if (addresses.some(containsJinja)) {
-    siteWarnings.push("Address comes from an unrendered Jinja template.")
-  }
-
-  siteWarnings.forEach((warning) => {
-    warnings.add(`Line ${sourceLine}: ${warning}`)
-  })
-
   sites.push({
     id: `${sourceLine}:${addresses.join(",")}`,
     addresses,
     sourceLine,
-    warnings: siteWarnings,
+    warnings: [],
   })
 }
 
@@ -158,31 +139,17 @@ function splitAddressList(header: string) {
   const addresses: string[] = []
   let current = ""
   let quote: string | null = null
-  let inJinjaExpression = false
 
   for (let index = 0; index < header.length; index += 1) {
     const char = header[index]
-    const next = header[index + 1]
 
-    if (!quote && char === "{" && next === "{") {
-      inJinjaExpression = true
-      current += char
-      continue
-    }
-
-    if (inJinjaExpression && char === "}" && next === "}") {
-      inJinjaExpression = false
-      current += char
-      continue
-    }
-
-    if (!inJinjaExpression && (char === "\"" || char === "'")) {
+    if (char === "\"" || char === "'") {
       quote = quote === char ? null : quote ?? char
       current += char
       continue
     }
 
-    if (!quote && !inJinjaExpression && (char === "," || /\s/.test(char))) {
+    if (!quote && (char === "," || /\s/.test(char))) {
       pushAddress(addresses, current)
       current = ""
       continue
@@ -210,22 +177,10 @@ function stripComment(line: string) {
 
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index]
-    const next = line[index + 1]
 
     if (char === "\"" || char === "'") {
       quote = quote === char ? null : quote ?? char
       result += char
-      continue
-    }
-
-    if (!quote && char === "{" && next === "#") {
-      const commentEndIndex = line.indexOf("#}", index + 2)
-
-      if (commentEndIndex === -1) {
-        return result
-      }
-
-      index = commentEndIndex + 1
       continue
     }
 
@@ -241,39 +196,39 @@ function stripComment(line: string) {
 
 function findOpeningBlockBrace(line: string) {
   let quote: string | null = null
-  let inJinjaExpression = false
 
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index]
-    const next = line[index + 1]
 
-    if (!quote && char === "{" && (next === "{" || next === "%" || next === "#")) {
-      inJinjaExpression = true
-      index += 1
-      continue
-    }
-
-    if (
-      inJinjaExpression &&
-      (char === "}" || char === "%" || char === "#") &&
-      next === "}"
-    ) {
-      inJinjaExpression = false
-      index += 1
-      continue
-    }
-
-    if (!inJinjaExpression && (char === "\"" || char === "'")) {
+    if (char === "\"" || char === "'") {
       quote = quote === char ? null : quote ?? char
       continue
     }
 
-    if (!quote && !inJinjaExpression && char === "{") {
+    if (quote || char !== "{") {
+      continue
+    }
+
+    if (isInlinePlaceholder(line, index)) {
+      index = line.indexOf("}", index)
+      continue
+    }
+
+    if (char === "{") {
       return index
     }
   }
 
   return -1
+}
+
+function isInlinePlaceholder(line: string, openingBraceIndex: number) {
+  const closingBraceIndex = line.indexOf("}", openingBraceIndex + 1)
+
+  return (
+    closingBraceIndex > openingBraceIndex &&
+    !/\s/.test(line.slice(openingBraceIndex + 1, closingBraceIndex))
+  )
 }
 
 function getBraceDelta(line: string) {
@@ -303,15 +258,7 @@ function getBraceDelta(line: string) {
 }
 
 function mayBePendingHeader(line: string) {
-  return (
-    !line.startsWith("@") &&
-    !line.startsWith("import ") &&
-    !isJinjaControlLine(line)
-  )
-}
-
-function isJinjaControlLine(line: string) {
-  return line.startsWith("{%")
+  return !line.startsWith("@") && !line.startsWith("import ")
 }
 
 function isGlobalOptionsBlock(header: string) {
@@ -324,10 +271,6 @@ function isSnippetBlock(header: string) {
 
 function isDirectiveOnlyBlock(addresses: string[]) {
   return addresses.length === 1 && addresses[0] === "handle"
-}
-
-function containsJinja(value: string) {
-  return /({[{%#]|[%#}]})/.test(value)
 }
 
 function toLoadError(error: unknown): CaddyfileLoadError {
