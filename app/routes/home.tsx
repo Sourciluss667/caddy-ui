@@ -1,4 +1,4 @@
-import { AlertTriangle, FileText, Globe2, Server } from "lucide-react"
+import { AlertTriangle, FileText, Globe2 } from "lucide-react"
 
 import type { Route } from "./+types/home"
 
@@ -28,8 +28,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <header className="flex flex-col gap-5 rounded-2xl border bg-background p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              <Server className="size-3.5" />
-              Caddy dashboard
+              <img
+                src="/caddy-logo.svg"
+                alt="Caddy"
+                className="h-3.5 w-auto"
+              />
+              dashboard
             </div>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight">
