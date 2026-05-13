@@ -67,7 +67,7 @@ export function parseCaddyfile(content: string) {
 
     if (containsJinja(strippedLine)) {
       warnings.add(
-        "Le fichier contient des expressions Jinja; elles sont affichees sans etre evaluees.",
+        "The file contains Jinja expressions; they are displayed without being evaluated.",
       )
     }
 
@@ -139,11 +139,11 @@ function addSiteBlock(
   const siteWarnings: string[] = []
 
   if (addresses.some(containsJinja)) {
-    siteWarnings.push("Adresse issue d'un template Jinja non rendu.")
+    siteWarnings.push("Address comes from an unrendered Jinja template.")
   }
 
   siteWarnings.forEach((warning) => {
-    warnings.add(`Ligne ${sourceLine}: ${warning}`)
+    warnings.add(`Line ${sourceLine}: ${warning}`)
   })
 
   sites.push({
@@ -335,14 +335,14 @@ function toLoadError(error: unknown): CaddyfileLoadError {
     if (error.code === "ENOENT") {
       return {
         code: error.code,
-        message: "Fichier Caddy introuvable.",
+        message: "Caddy file not found.",
       }
     }
 
     if (error.code === "EACCES" || error.code === "EPERM") {
       return {
         code: error.code,
-        message: "Permissions insuffisantes pour lire le fichier Caddy.",
+        message: "Insufficient permissions to read the Caddy file.",
       }
     }
 
@@ -354,7 +354,7 @@ function toLoadError(error: unknown): CaddyfileLoadError {
 
   return {
     code: "UNKNOWN",
-    message: "Impossible de lire la configuration Caddy.",
+    message: "Unable to read the Caddy configuration.",
   }
 }
 

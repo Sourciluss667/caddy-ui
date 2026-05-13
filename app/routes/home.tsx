@@ -7,7 +7,7 @@ export function meta() {
     { title: "Caddy UI" },
     {
       name: "description",
-      content: "Dashboard local pour visualiser les sites declares dans Caddy.",
+      content: "Local dashboard for viewing sites declared in Caddy.",
     },
   ]
 }
@@ -33,13 +33,13 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </div>
             <div className="space-y-2">
               <h1 className="text-3xl font-semibold tracking-tight">
-                Sites exposes par Caddy
+                Sites Exposed by Caddy
               </h1>
               <p className="max-w-2xl text-sm text-muted-foreground">
-                Lecture cote serveur du Caddyfile configure. Pour cibler un
-                fichier specifique, lance l'app avec{" "}
+                Server-side reading of the configured Caddyfile. To target a
+                specific file, start the app with{" "}
                 <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  CADDYFILE_PATH=/chemin/vers/Caddyfile.j2
+                  CADDYFILE_PATH=/path/to/Caddyfile.j2
                 </code>
                 .
               </p>
@@ -59,7 +59,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <div className="flex gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0" />
               <div className="space-y-2">
-                <h2 className="font-medium">Configuration illisible</h2>
+                <h2 className="font-medium">Configuration Unreadable</h2>
                 <p className="text-sm text-destructive/90">{error.message}</p>
                 <p className="text-xs text-destructive/80">
                   Code: <span className="font-mono">{error.code}</span>
@@ -74,7 +74,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <div className="flex gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
               <div className="space-y-2">
-                <h2 className="font-medium">Avertissements de lecture</h2>
+                <h2 className="font-medium">Read Warnings</h2>
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {warnings.map((warning) => (
                     <li key={warning}>{warning}</li>
@@ -88,10 +88,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         {!error && !hasSites ? (
           <section className="rounded-2xl border border-dashed bg-background p-10 text-center">
             <FileText className="mx-auto size-10 text-muted-foreground" />
-            <h2 className="mt-4 text-lg font-medium">Aucun site detecte</h2>
+            <h2 className="mt-4 text-lg font-medium">No Sites Detected</h2>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              Le fichier a ete lu, mais aucun bloc de site top-level n'a ete
-              trouve. Les blocs globaux et snippets Caddy sont ignores.
+              The file was read, but no top-level site block was found. Global
+              blocks and Caddy snippets are ignored.
             </p>
           </section>
         ) : null}
@@ -101,11 +101,10 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             <div className="flex items-center justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold tracking-tight">
-                  Sites detectes
+                  Detected Sites
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  {sites.length} bloc{sites.length > 1 ? "s" : ""} de site
-                  trouve{sites.length > 1 ? "s" : ""}.
+                  {sites.length} site block{sites.length > 1 ? "s" : ""} found.
                 </p>
               </div>
             </div>
@@ -120,7 +119,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                         <Globe2 className="size-4" />
-                        Ligne {site.sourceLine}
+                        Line {site.sourceLine}
                       </div>
 
                       <div className="flex flex-wrap gap-2">

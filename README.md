@@ -1,110 +1,110 @@
 # Caddy UI
 
-Dashboard local pour visualiser les sites exposes par Caddy a partir du
-Caddyfile de la machine.
+Local dashboard for viewing the sites exposed by Caddy from the machine's
+Caddyfile.
 
-L'application est une app React Router SSR avec shadcn/ui. Elle lit le
-Caddyfile cote serveur, extrait les blocs de sites top-level, puis les affiche
-dans une interface web.
+The application is a React Router SSR app with shadcn/ui. It reads the
+Caddyfile server-side, extracts top-level site blocks, and displays them in a
+web interface.
 
-## Cible de deploiement
+## Deployment Target
 
-Cette application a vocation a tourner directement sur une machine Debian qui
-heberge deja Caddy.
+This application is intended to run directly on a Debian machine that already
+hosts Caddy.
 
-Le deploiement cible est volontairement sans Docker:
+The target deployment deliberately avoids Docker:
 
-- Caddy reste installe et gere par le systeme.
-- L'application tourne comme service systemd Node.js.
-- Caddy reverse-proxy l'application vers un port local.
-- Le provisioning de la machine est gere via Ansible.
+- Caddy remains installed and managed by the system.
+- The application runs as a Node.js systemd service.
+- Caddy reverse-proxies the application to a local port.
+- Machine provisioning is managed through Ansible.
 
 ## Configuration
 
-Par defaut, l'application lit:
+By default, the application reads:
 
 ```bash
 /etc/caddy/Caddyfile
 ```
 
-Le chemin peut etre surcharge avec la variable d'environnement
-`CADDYFILE_PATH`:
+The path can be overridden with the `CADDYFILE_PATH` environment variable:
 
 ```bash
 CADDYFILE_PATH=/etc/caddy/Caddyfile.j2
 ```
 
-Le fichier est lu cote serveur. Il ne faut donc pas exposer un choix de chemin
-arbitraire depuis l'UI sur une instance accessible publiquement.
+The file is read server-side. Do not expose arbitrary path selection from the UI
+on a publicly reachable instance.
 
-## Developpement local
+## Local Development
 
-Installer les dependances:
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-Lancer le serveur de dev:
+Start the development server:
 
 ```bash
 npm run dev
 ```
 
-Le script de dev pointe actuellement vers `./Caddyfile.j2` via
-`CADDYFILE_PATH`, ce qui permet de tester sans lire `/etc/caddy/Caddyfile`.
+The development script currently points to `./Caddyfile.j2` through
+`CADDYFILE_PATH`, so the app can be tested without reading
+`/etc/caddy/Caddyfile`.
 
-Verifier les types:
+Check types:
 
 ```bash
 npm run typecheck
 ```
 
-Formatter le code:
+Format the code:
 
 ```bash
 npm run format
 ```
 
-## Build et execution
+## Build and Runtime
 
-Construire l'application:
+Build the application:
 
 ```bash
 npm run build
 ```
 
-Lancer le serveur SSR:
+Start the SSR server:
 
 ```bash
 CADDYFILE_PATH=/etc/caddy/Caddyfile npm run start
 ```
 
-## Provisioning Ansible attendu
+## Expected Ansible Provisioning
 
-Le role/playbook Ansible devra typiquement:
+The Ansible role or playbook should typically:
 
-- installer Node.js et npm sur Debian;
-- deployer le code ou l'artefact build de `caddy-ui`;
-- installer les dependances de production;
-- construire l'application si le build n'est pas deja fourni;
-- creer un utilisateur systeme dedie;
-- configurer un service systemd qui lance `npm run start`;
-- injecter `CADDYFILE_PATH` dans l'environnement du service;
-- s'assurer que l'utilisateur du service peut lire le Caddyfile cible;
-- ajouter la configuration Caddy qui reverse-proxy l'UI vers le port local;
-- recharger systemd et Caddy lorsque leurs configurations changent.
+- install Node.js and npm on Debian;
+- deploy the `caddy-ui` source code or build artifact;
+- install production dependencies;
+- build the application if the build artifact is not already provided;
+- create a dedicated system user;
+- configure a systemd service that runs `npm run start`;
+- inject `CADDYFILE_PATH` into the service environment;
+- ensure the service user can read the target Caddyfile;
+- add the Caddy configuration that reverse-proxies the UI to the local port;
+- reload systemd and Caddy when their configurations change.
 
-Exemple d'environnement systemd:
+Example systemd environment:
 
 ```ini
 Environment=NODE_ENV=production
 Environment=CADDYFILE_PATH=/etc/caddy/Caddyfile
 ```
 
-## Limites actuelles
+## Current Limitations
 
-- Les templates Jinja (`.j2`) sont scannes statiquement: les variables, boucles
-  et conditions ne sont pas rendues.
-- L'application lit le Caddyfile, mais ne modifie pas la configuration Caddy.
-- L'application ne declenche pas de reload Caddy.
+- Jinja templates (`.j2`) are scanned statically: variables, loops, and
+  conditions are not rendered.
+- The application reads the Caddyfile, but does not modify Caddy configuration.
+- The application does not trigger Caddy reloads.
