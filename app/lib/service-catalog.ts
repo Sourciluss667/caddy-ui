@@ -268,9 +268,22 @@ const serviceRules: ServiceRule[] = [
     "shield",
     "amber"
   ),
-  service("clea", /(^|\.)clea\.|crabwalk/, "Clea", "custom", "bot", "rose"),
-  service("eve", /(^|\.)eve\./, "Eve", "custom", "globe", "purple"),
-  service("quentn", /quentn\.xyz$/, "Quentn", "custom", "cloud", "cyan"),
+  service(
+    "custom-app",
+    /(^|\.)(app|apps|portal|api)\./,
+    "Custom App",
+    "custom",
+    "bot",
+    "cyan"
+  ),
+  service(
+    "project-gateway",
+    /(^|\.)gateway\.project\./,
+    "Project Gateway",
+    "custom",
+    "shield",
+    "amber"
+  ),
 ]
 
 export function resolveServiceMetadata(hostname: string): ServiceMetadata {

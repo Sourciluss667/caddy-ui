@@ -1,259 +1,272 @@
 {
-	email qcormand@gmail.com
+	email admin@example.test
 	acme_dns cloudflare {env.CLOUDFLARE_API_TOKEN}
 }
 
-nginx.local.sourciluss.cloud {
+nginx.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.77:81
+	reverse_proxy http://192.0.2.10:81
 }
 
-omv.local.sourciluss.cloud {
+omv.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.35:80
+	reverse_proxy http://192.0.2.11:80
 }
 
-proxmox.local.sourciluss.cloud, pve.local.sourciluss.cloud {
+proxmox.local.example.test, pve.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy https://192.168.1.3:8006 {
+	reverse_proxy https://192.0.2.12:8006 {
 		transport http {
 			tls_insecure_skip_verify
 		}
 	}
 }
 
-homarr.local.sourciluss.cloud, local.sourciluss.cloud {
+homarr.local.example.test, local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.73:3000
+	reverse_proxy http://192.0.2.13:3000
 }
 
-netdata.local.sourciluss.cloud {
+netdata.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.3:19999
+	reverse_proxy http://192.0.2.12:19999
 }
 
-jellyfin.local.sourciluss.cloud {
+jellyfin.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.113:8096 {
+	reverse_proxy http://192.0.2.14:8096 {
 		flush_interval -1
 		stream_timeout 36000s
 		stream_close_delay 5m
 	}
 }
 
-docker.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy https://192.168.1.50:9443 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
-}
-
-prowlarr.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:9696
-}
-
-radarr.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:7878
-}
-
-sonarr.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:8989
-}
-
-sonarr-anime.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:8990
-}
-
-seerr.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:5055
-}
-
-homeassistant.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.86:8123
-}
-
-docker-ha.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy https://192.168.1.86:9443 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
-}
-
-syncthing.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.43:8384
-}
-
-tos-nas.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy https://192.168.1.110:6443 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
-}
-
-syncthing-nas.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy https://192.168.1.110:8384 {
-		transport http {
-			tls_insecure_skip_verify
-		}
-	}
-}
-
-plex.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.39:32400
-}
-
-sourciluss.cloud {
-	reverse_proxy http://192.168.1.73:3000
-}
-
-jellyfin.sourciluss.cloud {
+jellyfin.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
 		X-Frame-Options "SAMEORIGIN"
 		X-XSS-Protection "0"
 		X-Content-Type-Options "nosniff"
-		Content-Security-Policy "default-src https: data: blob: http://image.tmdb.org; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/npm/jellyskin@latest/dist/main.css; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net/npm/jellyskin@latest/dist/logo.css; script-src 'self' 'unsafe-inline' https://www.gstatic.com/cv/js/sender/v1/cast_sender.js https://www.youtube.com blob:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; frame-ancestors 'self'"
+		Content-Security-Policy "default-src 'self' https: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; worker-src 'self' blob:; object-src 'none'; frame-ancestors 'self'"
 	}
-	reverse_proxy http://192.168.1.113:8096 {
+	reverse_proxy http://192.0.2.14:8096 {
 		flush_interval -1
 		stream_timeout 36000s
 		stream_close_delay 5m
 	}
 }
 
-jellystat.local.sourciluss.cloud {
+jellyfin-dev.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	}
+	reverse_proxy http://192.0.2.15:8096 {
+		flush_interval -1
+		stream_timeout 36000s
+		stream_close_delay 5m
+	}
+}
+
+portainer.local.example.test, docker.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:3056
+	reverse_proxy https://192.0.2.16:9443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
 }
 
-tdarr.local.sourciluss.cloud {
+prowlarr.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.91:8265
+	reverse_proxy http://192.0.2.17:9696
 }
 
-tautulli.local.sourciluss.cloud {
+radarr.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:8181
+	reverse_proxy http://192.0.2.17:7878
 }
 
-overseerr.local.sourciluss.cloud {
+sonarr.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:5056
+	reverse_proxy http://192.0.2.17:8989
 }
 
-plex.sourciluss.cloud {
-	reverse_proxy http://192.168.1.39:32400
-}
-
-overseerr.sourciluss.cloud {
-	reverse_proxy http://192.168.1.50:5056
-}
-
-qbittorrent.local.sourciluss.cloud {
+sonarr-anime.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.103:8090
+	reverse_proxy http://192.0.2.17:8990
 }
 
-pterodactyl.local.sourciluss.cloud {
+bazarr.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.111:80
+	reverse_proxy http://192.0.2.17:6767
 }
 
-eve.sourciluss.cloud {
+bazarr-anime.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:8080
+	reverse_proxy http://192.0.2.17:6768
 }
 
-*.quentn.xyz, quentn.xyz {
-	reverse_proxy http://192.168.1.169:3000
-}
-
-uptime.sourciluss.cloud {
+jackett.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.56:3001
+	reverse_proxy http://192.0.2.17:9117
 }
 
-n8n.local.sourciluss.cloud {
+overseerr.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.182:5678
+	reverse_proxy http://192.0.2.18:5055
 }
 
-webhook-n8n.sourciluss.cloud {
+overseerr.example.test {
+	reverse_proxy http://192.0.2.18:5055
+}
+
+plex.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.19:32400
+}
+
+plex.example.test {
+	reverse_proxy http://192.0.2.19:32400
+}
+
+jellystat.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.20:3056
+}
+
+tdarr.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.21:8265
+}
+
+tautulli.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.20:8181
+}
+
+homeassistant.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.22:8123
+}
+
+syncthing.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.23:8384
+}
+
+syncthing-nas.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy https://192.0.2.24:8384 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+nas.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy https://192.0.2.24:6443 {
+		transport http {
+			tls_insecure_skip_verify
+		}
+	}
+}
+
+qbittorrent.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.25:8090
+}
+
+jdownloader.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.25:5800
+}
+
+torrent-creator.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.25:4173
+}
+
+pterodactyl.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.26:80
+}
+
+uptime.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.27:3001
+}
+
+n8n.local.example.test {
+	header {
+		Strict-Transport-Security "max-age=31536000"
+	}
+	reverse_proxy http://192.0.2.28:5678
+}
+
+webhook-n8n.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
 	@webhook_paths path /webhook/* /webhook-test/*
 	handle @webhook_paths {
-		reverse_proxy http://192.168.1.182:5678
+		reverse_proxy http://192.0.2.28:5678
 	}
 
 	handle {
@@ -261,96 +274,33 @@ webhook-n8n.sourciluss.cloud {
 	}
 }
 
-clement.cormand.fr {
+portal.example.test {
+	reverse_proxy http://192.0.2.13:3000
+}
+
+app.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:8899
+	reverse_proxy http://192.0.2.29:8080
 }
 
-qui.local.sourciluss.cloud {
+api.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:7476
+	reverse_proxy http://192.0.2.29:8899
 }
 
-jdownloader.local.sourciluss.cloud {
+*.apps.example.test, apps.example.test {
+	reverse_proxy http://192.0.2.30:3000
+}
+
+gateway.project.local.example.test {
 	header {
 		Strict-Transport-Security "max-age=31536000"
 	}
-	reverse_proxy http://192.168.1.50:5800
-}
-
-torrent-creator.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:4173
-}
-
-jackett.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:9117
-}
-
-clea.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.5:3100
-}
-
-crabwalk.clea.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.5:3000
-}
-
-gateway.clea.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.196:18789
-}
-
-bazarr.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:6767
-}
-
-bazarr-anime.local.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000"
-	}
-	reverse_proxy http://192.168.1.50:6768
-}
-
-jellyfin-dev.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
-	reverse_proxy http://192.168.1.69:8096 {
-		flush_interval -1
-		stream_timeout 36000s
-		stream_close_delay 5m
-	}
-}
-
-jellyfin-dev-2.sourciluss.cloud {
-	header {
-		Strict-Transport-Security "max-age=31536000; includeSubDomains"
-	}
-	reverse_proxy http://192.168.1.188:8096 {
-		flush_interval -1
-		stream_timeout 36000s
-		stream_close_delay 5m
-	}
+	reverse_proxy http://192.0.2.31:18789
 }
 
 :5173 {
