@@ -1,13 +1,46 @@
-import { AlertTriangle, FileText, Globe2 } from "lucide-react"
+import {
+  AlertTriangle,
+  Asterisk,
+  Cable,
+  FileSearch,
+  Globe2,
+  HomeIcon,
+  Server,
+} from "lucide-react"
+import { useMemo, useState } from "react"
+import { FormattedMessage, useIntl, type IntlShape } from "react-intl"
+
+import { getStatusSummary, useDomainStatus } from "~/hooks/use-domain-status"
+import { HudShell } from "~/components/hud-shell"
+import { HudStat } from "~/components/hud-stat"
+import { SiteGroups } from "~/components/site-groups"
+import { SiteToolbar } from "~/components/site-toolbar"
+import type { CaddyfileLoadError } from "~/lib/caddyfile.server"
+import { getLocaleFromMatches, getMessages, type MessageId } from "~/lib/i18n"
+import {
+  DEFAULT_SITE_VIEW_FILTERS,
+  getVisibleSites,
+  type SiteViewFilters,
+} from "~/lib/site-view"
 
 import type { Route } from "./+types/home"
 
-export function meta() {
+const caddyfileErrorMessageIds: Partial<Record<string, MessageId>> = {
+  EACCES: "home.error.load.EACCES",
+  ENOENT: "home.error.load.ENOENT",
+  EPERM: "home.error.load.EPERM",
+  UNKNOWN: "home.error.load.UNKNOWN",
+}
+
+export function meta({ matches }: Route.MetaArgs) {
+  const locale = getLocaleFromMatches(matches)
+  const messages = getMessages(locale)
+
   return [
-    { title: "Caddy UI" },
+    { title: messages["home.meta.title"] },
     {
       name: "description",
-      content: "Local dashboard for viewing sites declared in Caddy.",
+      content: messages["home.meta.description"],
     },
   ]
 }
@@ -19,54 +52,120 @@ export async function loader() {
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
+  const intl = useIntl()
   const { error, path, sites, warnings } = loaderData
   const hasSites = sites.length > 0
+  const loadErrorMessage = error ? getCaddyfileErrorMessage(intl, error) : null
+  const publicSites = sites.filter((site) => site.isPublic).length
+  const localSites = sites.filter((site) => site.isLocal).length
+  const wildcardSites = sites.filter((site) => site.isWildcard).length
+  const upstreams = sites.reduce(
+    (total, site) => total + site.upstreams.length,
+    0
+  )
+  const [filters, setFilters] = useState<SiteViewFilters>(
+    DEFAULT_SITE_VIEW_FILTERS
+  )
+  const { checkAll, checkSite, statuses } = useDomainStatus(sites)
+  const visibleSites = useMemo(
+    () => getVisibleSites(sites, filters, statuses),
+    [filters, sites, statuses]
+  )
+  const statusSummary = getStatusSummary(sites, statuses)
 
   return (
-    <main className="min-h-svh bg-muted/30">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10">
-        <header className="flex flex-col gap-5 rounded-2xl border bg-background p-6 shadow-sm sm:flex-row sm:items-end sm:justify-between">
-          <div className="space-y-3">
-            <div className="inline-flex items-center gap-2 rounded-full border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-              <img
-                src="/caddy-logo.svg"
-                alt="Caddy"
-                className="h-3.5 w-auto"
-              />
-              dashboard
-            </div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-semibold tracking-tight">
-                Sites Exposed by Caddy
-              </h1>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Server-side reading of the configured Caddyfile. To target a
-                specific file, start the app with{" "}
-                <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
-                  CADDYFILE_PATH=/path/to/Caddyfile
-                </code>
-                .
-              </p>
-            </div>
-          </div>
+    <HudShell
+      collapseLabel={intl.formatMessage({ id: "home.header.collapse" })}
+      compactStats={
+        <>
+          <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-1 text-primary">
+            {sites.length} {intl.formatMessage({ id: "home.stats.sites" })}
+          </span>
+          <span className="rounded-full border border-emerald-300/25 bg-emerald-300/10 px-2 py-1 text-emerald-200">
+            {statusSummary.up} {intl.formatMessage({ id: "home.status.up" })}
+          </span>
+          <span className="rounded-full border border-rose-300/25 bg-rose-300/10 px-2 py-1 text-rose-200">
+            {statusSummary.down}{" "}
+            {intl.formatMessage({ id: "home.status.down" })}
+          </span>
+        </>
+      }
+      eyebrow={<FormattedMessage id="home.badge" />}
+      expandLabel={intl.formatMessage({ id: "home.header.expand" })}
+      source={path}
+      sourceLabel={<FormattedMessage id="home.source" />}
+      subtitle={
+        <FormattedMessage
+          id="home.intro"
+          values={{
+            command: (
+              <code className="rounded border border-primary/20 bg-primary/10 px-1.5 py-0.5 font-mono text-xs text-primary">
+                CADDYFILE_PATH=/path/to/Caddyfile
+              </code>
+            ),
+          }}
+        />
+      }
+      title={<FormattedMessage id="home.title" />}
+    >
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+        <HudStat
+          icon={<Server className="size-4" />}
+          label={<FormattedMessage id="home.stats.sites" />}
+          value={sites.length}
+        />
+        <HudStat
+          icon={<Globe2 className="size-4" />}
+          label={<FormattedMessage id="home.stats.public" />}
+          value={publicSites}
+        />
+        <HudStat
+          icon={<HomeIcon className="size-4" />}
+          label={<FormattedMessage id="home.stats.local" />}
+          value={localSites}
+        />
+        <HudStat
+          icon={<Cable className="size-4" />}
+          label={<FormattedMessage id="home.stats.upstreams" />}
+          value={upstreams}
+        />
+        <HudStat
+          icon={<Asterisk className="size-4" />}
+          label={<FormattedMessage id="home.stats.wildcards" />}
+          value={wildcardSites}
+        />
+        <HudStat
+          icon={<Globe2 className="size-4" />}
+          label={<FormattedMessage id="home.status.up" />}
+          value={statusSummary.up}
+        />
+        <HudStat
+          icon={<AlertTriangle className="size-4" />}
+          label={<FormattedMessage id="home.status.down" />}
+          value={statusSummary.down}
+        />
+        <HudStat
+          icon={<FileSearch className="size-4" />}
+          label={<FormattedMessage id="home.status.unknown" />}
+          value={statusSummary.unknown}
+        />
+      </section>
 
-          <div className="rounded-xl border bg-card p-4 text-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Source
-            </p>
-            <p className="mt-1 max-w-sm truncate font-mono text-xs">{path}</p>
-          </div>
-        </header>
-
+      <div className="space-y-5">
         {error ? (
-          <section className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-destructive">
+          <section className="hud-panel border-destructive/40 bg-destructive/10 p-6 text-destructive">
             <div className="flex gap-3">
               <AlertTriangle className="mt-0.5 size-5 shrink-0" />
               <div className="space-y-2">
-                <h2 className="font-medium">Configuration Unreadable</h2>
-                <p className="text-sm text-destructive/90">{error.message}</p>
+                <h2 className="font-mono text-sm font-semibold tracking-[0.25em] uppercase">
+                  <FormattedMessage id="home.error.title" />
+                </h2>
+                <p className="text-sm text-destructive/90">
+                  {loadErrorMessage}
+                </p>
                 <p className="text-xs text-destructive/80">
-                  Code: <span className="font-mono">{error.code}</span>
+                  <FormattedMessage id="home.error.code" />{" "}
+                  <span className="font-mono">{error.code}</span>
                 </p>
               </div>
             </div>
@@ -74,12 +173,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         ) : null}
 
         {warnings.length > 0 ? (
-          <section className="rounded-2xl border bg-card p-5">
+          <section className="hud-panel border-amber-300/30 bg-amber-300/10 p-5 text-amber-100">
             <div className="flex gap-3">
-              <AlertTriangle className="mt-0.5 size-5 shrink-0 text-muted-foreground" />
+              <AlertTriangle className="mt-0.5 size-5 shrink-0" />
               <div className="space-y-2">
-                <h2 className="font-medium">Read Warnings</h2>
-                <ul className="space-y-1 text-sm text-muted-foreground">
+                <h2 className="font-mono text-sm font-semibold tracking-[0.25em] uppercase">
+                  <FormattedMessage id="home.warnings.title" />
+                </h2>
+                <ul className="space-y-1 text-sm text-amber-100/80">
                   {warnings.map((warning) => (
                     <li key={warning}>{warning}</li>
                   ))}
@@ -88,70 +189,48 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             </div>
           </section>
         ) : null}
-
-        {!error && !hasSites ? (
-          <section className="rounded-2xl border border-dashed bg-background p-10 text-center">
-            <FileText className="mx-auto size-10 text-muted-foreground" />
-            <h2 className="mt-4 text-lg font-medium">No Sites Detected</h2>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              The file was read, but no top-level site block was found. Global
-              blocks and Caddy snippets are ignored.
-            </p>
-          </section>
-        ) : null}
-
-        {hasSites ? (
-          <section className="space-y-4">
-            <div className="flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold tracking-tight">
-                  Detected Sites
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  {sites.length} site block{sites.length > 1 ? "s" : ""} found.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {sites.map((site) => (
-                <article
-                  key={site.id}
-                  className="rounded-2xl border bg-background p-5 shadow-sm"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-3">
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <Globe2 className="size-4" />
-                        Line {site.sourceLine}
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {site.addresses.map((address) => (
-                          <span
-                            key={address}
-                            className="rounded-full border bg-muted px-3 py-1 font-mono text-xs"
-                          >
-                            {address}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {site.warnings.length > 0 ? (
-                    <div className="mt-4 rounded-xl bg-muted p-3 text-xs text-muted-foreground">
-                      {site.warnings.map((warning) => (
-                        <p key={warning}>{warning}</p>
-                      ))}
-                    </div>
-                  ) : null}
-                </article>
-              ))}
-            </div>
-          </section>
-        ) : null}
       </div>
-    </main>
+
+      {!error && !hasSites ? (
+        <section className="hud-panel hud-scan p-10 text-center">
+          <FileSearch className="mx-auto size-12 text-primary" />
+          <h2 className="mt-5 text-2xl font-semibold tracking-tight">
+            <FormattedMessage id="home.empty.title" />
+          </h2>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-6 text-muted-foreground">
+            <FormattedMessage id="home.empty.description" />
+          </p>
+        </section>
+      ) : null}
+
+      {hasSites ? (
+        <>
+          <SiteToolbar
+            filters={filters}
+            onFiltersChange={setFilters}
+            onRefreshStatuses={() => void checkAll(true)}
+            statusSummary={statusSummary}
+            totalCount={sites.length}
+            visibleCount={visibleSites.length}
+          />
+          <SiteGroups
+            groupBy={filters.groupBy}
+            onCheckSite={(site, force) => void checkSite(site, force)}
+            sites={visibleSites}
+            statuses={statuses}
+          />
+        </>
+      ) : null}
+    </HudShell>
   )
+}
+
+function getCaddyfileErrorMessage(intl: IntlShape, error: CaddyfileLoadError) {
+  const messageId = caddyfileErrorMessageIds[error.code]
+
+  if (messageId) {
+    return intl.formatMessage({ id: messageId })
+  }
+
+  return error.detail ?? intl.formatMessage({ id: "home.error.load.UNKNOWN" })
 }

@@ -1,12 +1,35 @@
 import { readFile } from "node:fs/promises"
 
+import {
+  resolveServiceMetadata,
+  type ServiceMetadata,
+} from "~/lib/service-catalog"
+
 const DEFAULT_CADDYFILE_PATH = "/etc/caddy/Caddyfile"
 
 export type CaddySite = {
   id: string
   addresses: string[]
+  hostnames: string[]
+  primaryHost: string
+  isWildcard: boolean
+  isLocal: boolean
+  isPublic: boolean
   sourceLine: number
+  upstreams: CaddyUpstream[]
+  hasHsts: boolean
+  hasTlsSkipVerify: boolean
+  hasStreamingHints: boolean
+  hasRestrictedHandle: boolean
+  service: ServiceMetadata
   warnings: string[]
+}
+
+export type CaddyUpstream = {
+  raw: string
+  protocol: string | null
+  host: string
+  port: string | null
 }
 
 export type CaddyfileLoadResult = {
@@ -18,10 +41,16 @@ export type CaddyfileLoadResult = {
 
 export type CaddyfileLoadError = {
   code: string
-  message: string
+  detail?: string
 }
 
 type PendingHeader = {
+  lines: string[]
+  sourceLine: number
+}
+
+type ActiveSiteBlock = {
+  header: string
   lines: string[]
   sourceLine: number
 }
@@ -56,6 +85,7 @@ export async function loadCaddyfileSites(): Promise<CaddyfileLoadResult> {
 export function parseCaddyfile(content: string) {
   const sites: CaddySite[] = []
   const pendingHeader: PendingHeader = { lines: [], sourceLine: 1 }
+  let activeSiteBlock: ActiveSiteBlock | null = null
   let depth = 0
 
   const lines = content.split(/\r?\n/)
@@ -68,7 +98,9 @@ export function parseCaddyfile(content: string) {
       return
     }
 
-    if (depth === 0) {
+    const previousDepth = depth
+
+    if (previousDepth === 0) {
       const openingBraceIndex = findOpeningBlockBrace(strippedLine)
 
       if (openingBraceIndex >= 0) {
@@ -79,13 +111,20 @@ export function parseCaddyfile(content: string) {
           headerLines.push(inlineHeader)
         }
 
-        addSiteBlock(
-          sites,
-          headerLines.join(" "),
-          pendingHeader.lines.length > 0
-            ? pendingHeader.sourceLine
-            : lineNumber,
-        )
+        activeSiteBlock = {
+          header: headerLines.join(" "),
+          lines: [],
+          sourceLine:
+            pendingHeader.lines.length > 0
+              ? pendingHeader.sourceLine
+              : lineNumber,
+        }
+
+        const inlineBody = strippedLine.slice(openingBraceIndex + 1).trim()
+
+        if (inlineBody && inlineBody !== "}") {
+          activeSiteBlock.lines.push(inlineBody)
+        }
 
         pendingHeader.lines = []
         pendingHeader.sourceLine = lineNumber
@@ -96,9 +135,16 @@ export function parseCaddyfile(content: string) {
 
         pendingHeader.lines.push(strippedLine)
       }
+    } else if (activeSiteBlock) {
+      activeSiteBlock.lines.push(strippedLine)
     }
 
     depth = Math.max(0, depth + getBraceDelta(strippedLine))
+
+    if (activeSiteBlock && depth === 0) {
+      addSiteBlock(sites, activeSiteBlock)
+      activeSiteBlock = null
+    }
 
     if (depth === 0 && strippedLine.endsWith("}")) {
       pendingHeader.lines = []
@@ -112,11 +158,9 @@ export function parseCaddyfile(content: string) {
   }
 }
 
-function addSiteBlock(
-  sites: CaddySite[],
-  header: string,
-  sourceLine: number,
-) {
+function addSiteBlock(sites: CaddySite[], siteBlock: ActiveSiteBlock) {
+  const { header, lines, sourceLine } = siteBlock
+
   if (!header || isGlobalOptionsBlock(header) || isSnippetBlock(header)) {
     return
   }
@@ -127,12 +171,113 @@ function addSiteBlock(
     return
   }
 
+  const hostnames = addresses.map(normalizeAddressToHost).filter(Boolean)
+  const primaryHost = hostnames[0] ?? addresses[0] ?? "unknown"
+  const upstreams = getUpstreams(lines)
+  const isLocal = hostnames.some(isLocalHostname)
+  const isWildcard = hostnames.some((hostname) => hostname.startsWith("*."))
+
   sites.push({
     id: `${sourceLine}:${addresses.join(",")}`,
     addresses,
+    hostnames,
+    primaryHost,
+    isWildcard,
+    isLocal,
+    isPublic: !isLocal && hostnames.length > 0,
     sourceLine,
+    upstreams,
+    hasHsts: lines.some((line) => line.includes("Strict-Transport-Security")),
+    hasTlsSkipVerify: lines.some((line) =>
+      line.includes("tls_insecure_skip_verify")
+    ),
+    hasStreamingHints: lines.some((line) =>
+      /^(flush_interval|stream_timeout|stream_close_delay)\b/.test(line)
+    ),
+    hasRestrictedHandle: lines.some((line) => /^respond\s+403\b/.test(line)),
+    service: resolveServiceMetadata(primaryHost),
     warnings: [],
   })
+}
+
+function getUpstreams(lines: string[]) {
+  const upstreams: CaddyUpstream[] = []
+
+  for (const line of lines) {
+    const reverseProxyMatch = line.match(/^reverse_proxy\s+(.+)$/)
+
+    if (!reverseProxyMatch) {
+      continue
+    }
+
+    const targets = reverseProxyMatch[1]
+      .replace(/\s+\{$/, "")
+      .split(/\s+/)
+      .filter((target) => target && !target.startsWith("@"))
+
+    upstreams.push(...targets.map(parseUpstream))
+  }
+
+  return upstreams
+}
+
+function parseUpstream(raw: string): CaddyUpstream {
+  const trimmed = raw.replace(/[{}]$/g, "")
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(trimmed)
+    ? trimmed
+    : `http://${trimmed}`
+
+  try {
+    const url = new URL(withProtocol)
+
+    return {
+      raw: trimmed,
+      protocol: url.protocol.replace(":", "") || null,
+      host: url.hostname || trimmed,
+      port: url.port || null,
+    }
+  } catch {
+    const [host, port] = trimmed.split(":")
+
+    return {
+      raw: trimmed,
+      protocol: null,
+      host: host || trimmed,
+      port: port || null,
+    }
+  }
+}
+
+function normalizeAddressToHost(address: string) {
+  const normalizedAddress = address.trim().replace(/\/+$/, "")
+
+  if (!normalizedAddress) {
+    return ""
+  }
+
+  if (normalizedAddress.startsWith(":")) {
+    return normalizedAddress
+  }
+
+  const withProtocol = /^[a-z][a-z\d+.-]*:\/\//i.test(normalizedAddress)
+    ? normalizedAddress
+    : `http://${normalizedAddress}`
+
+  try {
+    const url = new URL(withProtocol)
+    return url.hostname || normalizedAddress
+  } catch {
+    return normalizedAddress.split("/")[0]?.split(":")[0] ?? normalizedAddress
+  }
+}
+
+function isLocalHostname(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname.endsWith(".local") ||
+    hostname.includes(".local.") ||
+    hostname.startsWith(":")
+  )
 }
 
 function splitAddressList(header: string) {
@@ -143,8 +288,8 @@ function splitAddressList(header: string) {
   for (let index = 0; index < header.length; index += 1) {
     const char = header[index]
 
-    if (char === "\"" || char === "'") {
-      quote = quote === char ? null : quote ?? char
+    if (char === '"' || char === "'") {
+      quote = quote === char ? null : (quote ?? char)
       current += char
       continue
     }
@@ -178,8 +323,8 @@ function stripComment(line: string) {
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index]
 
-    if (char === "\"" || char === "'") {
-      quote = quote === char ? null : quote ?? char
+    if (char === '"' || char === "'") {
+      quote = quote === char ? null : (quote ?? char)
       result += char
       continue
     }
@@ -200,8 +345,8 @@ function findOpeningBlockBrace(line: string) {
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index]
 
-    if (char === "\"" || char === "'") {
-      quote = quote === char ? null : quote ?? char
+    if (char === '"' || char === "'") {
+      quote = quote === char ? null : (quote ?? char)
       continue
     }
 
@@ -238,8 +383,8 @@ function getBraceDelta(line: string) {
   for (let index = 0; index < line.length; index += 1) {
     const char = line[index]
 
-    if (char === "\"" || char === "'") {
-      quote = quote === char ? null : quote ?? char
+    if (char === '"' || char === "'") {
+      quote = quote === char ? null : (quote ?? char)
       continue
     }
 
@@ -278,26 +423,23 @@ function toLoadError(error: unknown): CaddyfileLoadError {
     if (error.code === "ENOENT") {
       return {
         code: error.code,
-        message: "Caddy file not found.",
       }
     }
 
     if (error.code === "EACCES" || error.code === "EPERM") {
       return {
         code: error.code,
-        message: "Insufficient permissions to read the Caddy file.",
       }
     }
 
     return {
       code: error.code ?? "UNKNOWN",
-      message: error.message,
+      detail: error.message,
     }
   }
 
   return {
     code: "UNKNOWN",
-    message: "Unable to read the Caddy configuration.",
   }
 }
 
