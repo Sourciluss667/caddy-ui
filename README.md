@@ -95,12 +95,16 @@ servers. Pushing a tag named `v*` creates a GitHub Release with:
   production `node_modules/`, `package.json`, and `pnpm-lock.yaml`;
 - `SHA256SUMS`, used to verify the downloaded archive.
 
-Create a release:
+Create a release from a clean working tree:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+pnpm run release
 ```
+
+The first release uses `v0.1.0`. If that tag already exists, the release command
+bumps the patch version automatically before creating and pushing the next tag.
+You can request a larger bump with `pnpm run release -- minor` or
+`pnpm run release -- major`.
 
 Example deployment on Debian 13:
 
