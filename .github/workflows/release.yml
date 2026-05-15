@@ -1,0 +1,66 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish Debian 13 release
+    runs-on: ubuntu-24.04
+
+    env:
+      NODE_VERSION: "22"
+      PNPM_VERSION: "10"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm run build
+
+      - name: Keep production dependencies only
+        run: pnpm prune --prod
+
+      - name: Package release asset
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          version="${GITHUB_REF_NAME}"
+          package_name="caddy-ui-${version}-linux-amd64"
+          staging_dir="${RUNNER_TEMP}/${package_name}"
+          archive_name="${package_name}.tar.gz"
+
+          mkdir -p "${staging_dir}"
+          cp -R build node_modules package.json pnpm-lock.yaml "${staging_dir}/"
+
+          tar -czf "${archive_name}" -C "${RUNNER_TEMP}" "${package_name}"
+          sha256sum "${archive_name}" > SHA256SUMS
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            caddy-ui-${{ github.ref_name }}-linux-amd64.tar.gz
+            SHA256SUMS

@@ -12,7 +12,7 @@ web interface.
 This application is intended to run directly on a Debian machine that already
 hosts Caddy.
 
-The target deployment deliberately avoids Docker:
+Deployment model:
 
 - Caddy remains installed and managed by the system.
 - The application runs as a Node.js systemd service.
@@ -38,16 +38,22 @@ on a publicly reachable instance.
 
 ## Local Development
 
+Enable Corepack so the project uses pnpm consistently:
+
+```bash
+corepack enable
+```
+
 Install dependencies:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Start the development server:
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 The development script currently points to `./Caddyfile.example` through
@@ -57,13 +63,13 @@ The development script currently points to `./Caddyfile.example` through
 Check types:
 
 ```bash
-npm run typecheck
+pnpm run typecheck
 ```
 
 Format the code:
 
 ```bash
-npm run format
+pnpm run format
 ```
 
 ## Build and Runtime
@@ -71,25 +77,62 @@ npm run format
 Build the application:
 
 ```bash
-npm run build
+pnpm run build
 ```
 
 Start the SSR server:
 
 ```bash
-CADDYFILE_PATH=/etc/caddy/Caddyfile npm run start
+CADDYFILE_PATH=/etc/caddy/Caddyfile pnpm run start
 ```
+
+## GitHub Releases
+
+Releases are built by GitHub Actions for Debian 13-compatible Linux amd64
+servers. Pushing a tag named `v*` creates a GitHub Release with:
+
+- `caddy-ui-<version>-linux-amd64.tar.gz`, containing `build/`,
+  production `node_modules/`, `package.json`, and `pnpm-lock.yaml`;
+- `SHA256SUMS`, used to verify the downloaded archive.
+
+Create a release:
+
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Example deployment on Debian 13:
+
+```bash
+VERSION=v0.1.0
+OWNER=your-github-owner
+REPO=caddy-ui
+
+curl -L -O "https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}/caddy-ui-${VERSION}-linux-amd64.tar.gz"
+curl -L -O "https://github.com/${OWNER}/${REPO}/releases/download/${VERSION}/SHA256SUMS"
+sha256sum -c SHA256SUMS
+
+sudo mkdir -p "/opt/caddy-ui/releases/${VERSION}"
+sudo tar -xzf "caddy-ui-${VERSION}-linux-amd64.tar.gz" -C "/opt/caddy-ui/releases/${VERSION}" --strip-components=1
+sudo ln -sfn "/opt/caddy-ui/releases/${VERSION}" /opt/caddy-ui/current
+```
+
+The Debian host should run the same major Node.js version as the release
+workflow: Node.js 22 LTS. Keep `corepack` enabled so `pnpm` is available to run
+the packaged application.
 
 ## Expected Ansible Provisioning
 
 The Ansible role or playbook should typically:
 
-- install Node.js and npm on Debian;
-- deploy the `caddy-ui` source code or build artifact;
-- install production dependencies;
-- build the application if the build artifact is not already provided;
+- install Node.js 22 LTS and enable Corepack/pnpm on Debian 13;
+- download the `caddy-ui` GitHub Release artifact;
+- verify the release artifact with `SHA256SUMS`;
+- deploy the extracted artifact under `/opt/caddy-ui/releases/<version>`;
+- update `/opt/caddy-ui/current` to point to the deployed version;
 - create a dedicated system user;
-- configure a systemd service that runs `npm run start`;
+- configure a systemd service that runs `pnpm run start`;
 - inject `CADDYFILE_PATH` into the service environment;
 - ensure the service user can read the target Caddyfile;
 - add the Caddy configuration that reverse-proxies the UI to the local port;
@@ -100,6 +143,8 @@ Example systemd environment:
 ```ini
 Environment=NODE_ENV=production
 Environment=CADDYFILE_PATH=/etc/caddy/Caddyfile
+WorkingDirectory=/opt/caddy-ui/current
+ExecStart=/usr/bin/pnpm run start
 ```
 
 ## Current Limitations
